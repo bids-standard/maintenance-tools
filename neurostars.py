@@ -5,7 +5,9 @@ Pings neurostars discourse API to:
 - saves the requests content to TSV for each tag
 - prints some info for each tag
 
-https://docs.discourse.org/
+API doc: https://docs.discourse.org/
+
+Note: that some topics have several tags so they may be counted twice
 """
 
 from datetime import datetime
@@ -18,7 +20,7 @@ from utils import return_min_max_date
 
 """
 list of tags
-GET https://neurostars.org/tags.json
+GET https://neurostars.org/tags.json 
 """
 
 tags = [
@@ -42,6 +44,8 @@ tags = [
     "nipreps",
     "niprep",
     "fitlins",
+    "openneuro",
+    "openneuro-cli",
 ]
 
 # Gets only the first 2 pages of topics if True
