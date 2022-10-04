@@ -57,7 +57,7 @@ repos = [
     "bids-matlab",
 ]
 
-def plot_information(df, month):
+def plot_information(df, month, print_to_file=True):
 
     with sns.plotting_context("talk"):
         fig, axs = plt.subplots(2, 1, figsize=(10, 12), gridspec_kw={"hspace": 0.75})
@@ -84,7 +84,8 @@ def plot_information(df, month):
     sns.despine(fig)
     fig.suptitle(f"BIDS: GitHub summary for {calendar.month_name[month]}")
 
-    fig.savefig("output.png")    
+    if print_to_file:
+        fig.savefig("output.png")    
 
 def main():
 
@@ -158,32 +159,7 @@ def main():
     # print log for double checking / debugging
     print(json.dumps(log, indent=4))
 
-    # %%
-    # Plot information
-    with sns.plotting_context("talk"):
-        fig, axs = plt.subplots(2, 1, figsize=(10, 12), gridspec_kw={"hspace": 0.75})
-        plt.tight_layout()
-        for i, item_type in enumerate(["PRs", "Issues"]):
-
-            ax = axs.flat[i]
-
-            sns.barplot(
-                ax=ax,
-                x="repo",
-                y="value",
-                hue="state",
-                data=df[df["item_type"] == item_type],
-            )
-
-            if i > 0:
-                ax.get_legend().remove()
-
-            ax.set(xlabel="", title=item_type)
-            ax.set_xticks(ax.get_xticks(), ax.get_xticklabels(), rotation=45, ha="right")
-
-
-    sns.despine(fig)
-    fig.suptitle(f"BIDS: GitHub summary for {calendar.month_name[month]}")
+    plot_information(df, month, print_to_file=True)
 
 
 if __name__ == "__main__":
