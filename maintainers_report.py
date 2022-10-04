@@ -21,20 +21,15 @@ Requirements:
 
 """
 
-
-# %%
-# Imports
-import calendar
 import json
-from datetime import datetime
 
-import matplotlib.pyplot as plt
 import pandas as pd
-import seaborn as sns
 from github import Github
 from tqdm import tqdm
 
-# %%
+
+from utils import plot_information, return_min_max_date
+
 # Settings
 # Set a token (or use None)
 # NOTE: Never commit a token to git history
@@ -57,51 +52,15 @@ repos = [
     "bids-matlab",
 ]
 
-def plot_information(df, month, print_to_file=True):
-
-    with sns.plotting_context("talk"):
-        fig, axs = plt.subplots(2, 1, figsize=(10, 12), gridspec_kw={"hspace": 0.75})
-        plt.tight_layout()
-        for i, item_type in enumerate(["PRs", "Issues"]):
-
-            ax = axs.flat[i]
-
-            sns.barplot(
-                ax=ax,
-                x="repo",
-                y="value",
-                hue="state",
-                data=df[df["item_type"] == item_type],
-            )
-
-            if i > 0:
-                ax.get_legend().remove()
-
-            ax.set(xlabel="", title=item_type)
-            ax.set_xticks(ax.get_xticks(), ax.get_xticklabels(), rotation=45, ha="right")
-
-
-    sns.despine(fig)
-    fig.suptitle(f"BIDS: GitHub summary for {calendar.month_name[month]}")
-
-    if print_to_file:
-        fig.savefig("output.png")    
+  
 
 def main():
 
     repos = [f"{user}/" + repo for repo in repos]
 
-    # %%
     # Parse information
 
-    # Calc min and maxdate for a PR/Issue to fall in our timewindow of interest
-    mindate = datetime(datetime.now().year, month, 1)
-    if month < 12:
-        assert month >= 1, "month must be an int between 1 and 12"
-        maxdate = datetime(datetime.now().year, month + 1, 1)
-    else:
-        assert month == 12, "month must be an int between 1 and 12"
-        maxdate = datetime(datetime.now().year + 1, 1, 1)
+    (mindate, maxdate) = return_min_max_date(month)
 
     # PRs/issues are ordered newest to oldest by creation date
     # we go through them in order, counting closed and created
@@ -155,7 +114,6 @@ def main():
 
     df = pd.concat(dfs)
 
-    # %%
     # print log for double checking / debugging
     print(json.dumps(log, indent=4))
 
