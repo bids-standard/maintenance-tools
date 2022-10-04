@@ -21,6 +21,7 @@ Requirements:
 
 """
 
+
 # %%
 # Imports
 import calendar
@@ -55,104 +56,135 @@ repos = [
     "pybids",
     "bids-matlab",
 ]
-repos = [user + "/" + repo for repo in repos]
 
-# %%
-# Parse information
+def plot_information(df, month):
 
-# Calc min and maxdate for a PR/Issue to fall in our timewindow of interest
-mindate = datetime(datetime.now().year, month, 1)
-if month < 12:
-    assert month >= 1, "month must be an int between 1 and 12"
-    maxdate = datetime(datetime.now().year, month + 1, 1)
-else:
-    assert month == 12, "month must be an int between 1 and 12"
-    maxdate = datetime(datetime.now().year + 1, 1, 1)
+    with sns.plotting_context("talk"):
+        fig, axs = plt.subplots(2, 1, figsize=(10, 12), gridspec_kw={"hspace": 0.75})
+        plt.tight_layout()
+        for i, item_type in enumerate(["PRs", "Issues"]):
 
-# PRs/issues are ordered newest to oldest by creation date
-# we go through them in order, counting closed and created
-# once for each repo
-log = {}
-dfs = []
-for repo_name in tqdm(repos):
-    log[repo_name] = {}
-    repo = g.get_repo(repo_name)
-    data = {"PRs": {"Opened": 0, "Closed": 0}, "Issues": {"Opened": 0, "Closed": 0}}
-    for item_type in ["PRs", "Issues"]:
-        log[repo_name][item_type] = {}
-        for state in ["opened", "closed"]:
+            ax = axs.flat[i]
 
-            log[repo_name][item_type][state] = []
+            sns.barplot(
+                ax=ax,
+                x="repo",
+                y="value",
+                hue="state",
+                data=df[df["item_type"] == item_type],
+            )
 
-            if item_type == "PRs":
-                items = repo.get_pulls(state="open" if state == "opened" else state)
-            else:
-                assert item_type == "Issues"
-                items = repo.get_issues(state="open" if state == "opened" else state)
+            if i > 0:
+                ax.get_legend().remove()
 
-            for item in items:
+            ax.set(xlabel="", title=item_type)
+            ax.set_xticks(ax.get_xticks(), ax.get_xticklabels(), rotation=45, ha="right")
 
-                # if looking through issues, clean up: each PR is an issue as
-                # well, but we don't want to count these, see:
-                # https://github.com/PyGithub/PyGithub/issues/1744
-                if (item_type == "Issues") and (item.pull_request is not None):
-                    continue
 
-                added = False
-                if item.closed_at is not None:
-                    if (item.closed_at >= mindate) and (item.closed_at < maxdate):
-                        if item_type == "PRs":
-                            # ignore PRs that were closed but not merged
-                            if not item.is_merged():
-                                continue
-                        data[item_type]["Closed"] += 1
+    sns.despine(fig)
+    fig.suptitle(f"BIDS: GitHub summary for {calendar.month_name[month]}")
+
+    fig.savefig("output.png")    
+
+def main():
+
+    repos = [f"{user}/" + repo for repo in repos]
+
+    # %%
+    # Parse information
+
+    # Calc min and maxdate for a PR/Issue to fall in our timewindow of interest
+    mindate = datetime(datetime.now().year, month, 1)
+    if month < 12:
+        assert month >= 1, "month must be an int between 1 and 12"
+        maxdate = datetime(datetime.now().year, month + 1, 1)
+    else:
+        assert month == 12, "month must be an int between 1 and 12"
+        maxdate = datetime(datetime.now().year + 1, 1, 1)
+
+    # PRs/issues are ordered newest to oldest by creation date
+    # we go through them in order, counting closed and created
+    # once for each repo
+    log = {}
+    dfs = []
+    for repo_name in tqdm(repos):
+        log[repo_name] = {}
+        repo = g.get_repo(repo_name)
+        data = {"PRs": {"Opened": 0, "Closed": 0}, "Issues": {"Opened": 0, "Closed": 0}}
+        for item_type in ["PRs", "Issues"]:
+            log[repo_name][item_type] = {}
+            for state in ["opened", "closed"]:
+
+                log[repo_name][item_type][state] = []
+
+                if item_type == "PRs":
+                    items = repo.get_pulls(state="open" if state == "opened" else state)
+                else:
+                    assert item_type == "Issues"
+                    items = repo.get_issues(state="open" if state == "opened" else state)
+
+                for item in items:
+
+                    # if looking through issues, clean up: each PR is an issue as
+                    # well, but we don't want to count these, see:
+                    # https://github.com/PyGithub/PyGithub/issues/1744
+                    if (item_type == "Issues") and (item.pull_request is not None):
+                        continue
+
+                    added = False
+                    if item.closed_at is not None:
+                        if (item.closed_at >= mindate) and (item.closed_at < maxdate):
+                            if item_type == "PRs":
+                                # ignore PRs that were closed but not merged
+                                if not item.is_merged():
+                                    continue
+                            data[item_type]["Closed"] += 1
+                            added = True
+                    if (item.created_at >= mindate) and (item.created_at < maxdate):
+                        data[item_type]["Opened"] += 1
                         added = True
-                if (item.created_at >= mindate) and (item.created_at < maxdate):
-                    data[item_type]["Opened"] += 1
-                    added = True
 
-                if added:
-                    log[repo_name][item_type][state] += [item.html_url]
+                    if added:
+                        log[repo_name][item_type][state] += [item.html_url]
 
-    df = pd.DataFrame(data).melt(ignore_index=False).reset_index()
-    df["repo"] = repo_name.replace(user + "/", "")
-    df.columns = ["state", "item_type", "value", "repo"]
-    dfs.append(df)
+        df = pd.DataFrame(data).melt(ignore_index=False).reset_index()
+        df["repo"] = repo_name.replace(f"{user}/", "")
+        df.columns = ["state", "item_type", "value", "repo"]
+        dfs.append(df)
 
-df = pd.concat(dfs)
-df
+    df = pd.concat(dfs)
 
-# %%
-# print log for double checking / debugging
-print(json.dumps(log, indent=4))
+    # %%
+    # print log for double checking / debugging
+    print(json.dumps(log, indent=4))
 
-# %%
-# Plot information
-with sns.plotting_context("talk"):
-    fig, axs = plt.subplots(2, 1, figsize=(10, 12), gridspec_kw={"hspace": 0.75})
-    plt.tight_layout()
-    for i, item_type in enumerate(["PRs", "Issues"]):
+    # %%
+    # Plot information
+    with sns.plotting_context("talk"):
+        fig, axs = plt.subplots(2, 1, figsize=(10, 12), gridspec_kw={"hspace": 0.75})
+        plt.tight_layout()
+        for i, item_type in enumerate(["PRs", "Issues"]):
 
-        ax = axs.flat[i]
+            ax = axs.flat[i]
 
-        sns.barplot(
-            ax=ax,
-            x="repo",
-            y="value",
-            hue="state",
-            data=df[df["item_type"] == item_type],
-        )
+            sns.barplot(
+                ax=ax,
+                x="repo",
+                y="value",
+                hue="state",
+                data=df[df["item_type"] == item_type],
+            )
 
-        if i > 0:
-            ax.get_legend().remove()
+            if i > 0:
+                ax.get_legend().remove()
 
-        ax.set(xlabel="", title=item_type)
-        ax.set_xticks(ax.get_xticks(), ax.get_xticklabels(), rotation=45, ha="right")
+            ax.set(xlabel="", title=item_type)
+            ax.set_xticks(ax.get_xticks(), ax.get_xticklabels(), rotation=45, ha="right")
 
 
-sns.despine(fig)
-months = ["Jan"]
-fig.suptitle(f"BIDS: GitHub summary for {calendar.month_name[month]}")
+    sns.despine(fig)
+    fig.suptitle(f"BIDS: GitHub summary for {calendar.month_name[month]}")
 
 
-# %%
+if __name__ == "__main__":
+    main()

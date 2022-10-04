@@ -1,2 +1,6 @@
+*.png
+
 .vscode
 .ipynb_checkpoints
+
+env
