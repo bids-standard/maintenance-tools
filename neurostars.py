@@ -8,6 +8,8 @@ Pings neurostars discourse API to:
 https://docs.discourse.org/
 """
 
+from datetime import datetime
+
 import pandas as pd
 import requests
 from rich import print
@@ -109,7 +111,10 @@ def get_topics_for_tag(tag: str, debug=False, verbose=False) -> pd.DataFrame:
 
 def main():
 
+    print(f"Neurostats stats for the {datetime.now().date()}")
+
     (mindate, maxdate) = return_min_max_date(month)
+    print(f"New posts counted between {mindate.date()} and {maxdate.date()}")
 
     for tag in tags:
 
@@ -136,7 +141,7 @@ def main():
             {post_with_no_reply} ({percent_with_no_reply:.2f}%) with no reply
             {post_with_accepted_answer} ({percent_with_accepted_answer:.2f}%) with accepted answers"""
             )
-            print(f"\t{recent_post.sum()} new posts last month")
+            print(f"\t{recent_post.sum()} new posts")
 
 
 if __name__ == "__main__":
