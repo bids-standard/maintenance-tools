@@ -2,7 +2,6 @@ import pandas as pd
 
 from maintainers_report import plot_information
 
-
 def test_ploting():
 
     dfs = []

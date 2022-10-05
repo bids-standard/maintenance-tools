@@ -52,8 +52,6 @@ repos = [
     "bids-matlab",
 ]
 
-  
-
 def main():
 
     repos = [f"{user}/" + repo for repo in repos]
