@@ -6,15 +6,17 @@ import pandas as pd
 import seaborn as sns
 
 
-def return_min_max_date(month):
-    """Calculate min and maxdate for our timewindow of interest"""
-    mindate = datetime(datetime.now().year, month, 1)
+def return_min_max_date(month, year=None):
+    """Calculate min and maxdate for our time window of interest"""
+    if year is None:
+        year = datetime.now().year
+    mindate = datetime(year, month, 1)
     if month < 12:
         assert month >= 1, "month must be an int between 1 and 12"
-        maxdate = datetime(datetime.now().year, month + 1, 1)
+        maxdate = datetime(year, month + 1, 1)
     else:
         assert month == 12, "month must be an int between 1 and 12"
-        maxdate = datetime(datetime.now().year + 1, 1, 1)
+        maxdate = datetime(year + 1, 1, 1)
 
     return mindate, maxdate
 
