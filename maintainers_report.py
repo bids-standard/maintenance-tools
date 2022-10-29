@@ -52,8 +52,9 @@ repos = [
     "bids-matlab",
 ]
 
-def main():
 
+def main(repos):
+    """Make fig for maintainers report."""
     repos = [f"{user}/" + repo for repo in repos]
 
     # Parse information
@@ -119,4 +120,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    main(repos)

@@ -1,3 +1,4 @@
+"""Functions that get reused across modules."""
 import calendar
 from datetime import datetime
 
@@ -7,7 +8,7 @@ import seaborn as sns
 
 
 def return_min_max_date(month, year=None):
-    """Calculate min and maxdate for our time window of interest"""
+    """Calculate min and maxdate for our time window of interest."""
     if year is None:
         year = datetime.now().year
     mindate = datetime(year, month, 1)
@@ -22,7 +23,7 @@ def return_min_max_date(month, year=None):
 
 
 def plot_information(df: pd.DataFrame, month: int, print_to_file=True):
-
+    """Plot maintainers report fig."""
     with sns.plotting_context("talk"):
         fig, axs = plt.subplots(2, 1, figsize=(10, 12), gridspec_kw={"hspace": 0.75})
         plt.tight_layout()
@@ -50,4 +51,5 @@ def plot_information(df: pd.DataFrame, month: int, print_to_file=True):
     fig.suptitle(f"BIDS: GitHub summary for {calendar.month_name[month]}")
 
     if print_to_file:
-        fig.savefig("output.png")
+        fig.savefig("output.png", bbox_inches="tight")
+
