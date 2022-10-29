@@ -52,3 +52,25 @@ def plot_information(df: pd.DataFrame, month: int, print_to_file=True):
 
     if print_to_file:
         fig.savefig("output.png", bbox_inches="tight")
+
+
+def plot_neurostars(file, print_to_file=True):
+
+    df = pd.read_csv(file, sep="\t")
+
+    df["year_month"] = pd.to_datetime(df.year_month)
+
+    with sns.plotting_context("talk"):
+        fig, axs = plt.subplots(1, 1, figsize=(20, 12), gridspec_kw={"hspace": 0.75})
+
+        sns.lineplot(data=df, x="year_month", y="value", hue="key", ax=axs)
+
+        plt.ylim([0, df.value.max()])
+
+        sns.despine(fig)
+
+        fig.suptitle("Neurostars summary for 'BIDS' tag")
+        fig.show()
+
+        if print_to_file:
+            fig.savefig("output.png", bbox_inches="tight")
