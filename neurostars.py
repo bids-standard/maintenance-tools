@@ -4,6 +4,10 @@ Pings neurostars discourse API to:
 - get all of topics for a list of tags
 - saves the requests content to TSV for each tag
 - prints some info for each tag
+    - nb of posts
+    - nb of posts with no reply
+    - nb of posts with accepted answer
+    - in the last month and for the last 12 months
 
 API doc: https://docs.discourse.org/
 
