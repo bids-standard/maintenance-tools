@@ -1,4 +1,3 @@
-
 import pandas as pd
 
 from maintainers_report import plot_information
@@ -20,5 +19,7 @@ def test_ploting():
 
     dfs.append(df)
     df = pd.concat(dfs)
+
+    print(df)
 
     plot_information(df, month)
