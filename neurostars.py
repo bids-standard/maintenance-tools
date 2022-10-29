@@ -7,7 +7,9 @@ Pings neurostars discourse API to:
     - nb of posts
     - nb of posts with no reply
     - nb of posts with accepted answer
-    - in the last month and for the last 12 months
+- for the BIDS tag it prints those data for:
+  - the last month 
+  - the last 12 months
 
 API doc: https://docs.discourse.org/
 
@@ -191,6 +193,7 @@ def main():
             monthly_stats = pd.DataFrame.from_dict(monthly_stats)
             if tag == "bids":
                 print(monthly_stats)
+                monthly_stats.to_csv("neurostars_monthly_stats.tsv", sep="\t")
 
 
 if __name__ == "__main__":
