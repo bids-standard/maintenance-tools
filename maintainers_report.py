@@ -80,7 +80,9 @@ def main(repos):
                     items = repo.get_pulls(state="open" if state == "opened" else state)
                 else:
                     assert item_type == "Issues"
-                    items = repo.get_issues(state="open" if state == "opened" else state)
+                    items = repo.get_issues(
+                        state="open" if state == "opened" else state
+                    )
 
                 for item in items:
 

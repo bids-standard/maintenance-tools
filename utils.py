@@ -52,4 +52,3 @@ def plot_information(df: pd.DataFrame, month: int, print_to_file=True):
 
     if print_to_file:
         fig.savefig("output.png", bbox_inches="tight")
-
