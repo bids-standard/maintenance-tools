@@ -5,14 +5,16 @@ Pings neurostars discourse API to:
 - saves the requests content to TSV for each tag
 - prints some info for each tag
     - nb of topics
+    - nb new topics
+    - nb posts
+    - nb new posts
     - nb of topics with no reply
     - nb of topics with accepted answer
     - mean nb of posts per topic
-    - nb new topics
-    - nb new posts
+
 - for the BIDS tag it prints those data for:
     - the last month 
-    - the last 12 months
+    - the last X months
 
 API doc: https://docs.discourse.org/
 
@@ -43,12 +45,12 @@ verbose = False
 debug = False
 
 # Set a month of interest
-month = 10  # integer, e.g., May = 5
+month = 11  # integer, e.g., May = 5
 
 
-def tags():
+def tags(debug):
     if debug:
-        return ["bids", "fmriprep"]
+        return ["pybids", "bids-app"]
     else:
         return [
             "bids",
@@ -74,6 +76,27 @@ def tags():
             "openneuro",
             "openneuro-cli",
         ]
+
+
+def tags_combine():
+    return {
+        "nipreps": [
+            "fmriprep-report",
+            "fmriprep",
+            "dmriprep",
+            "qsiprep",
+            "aslprep",
+            "smriprep",
+            "dtiprep",
+            "nipreps",
+            "niprep",
+        ],
+        "openneuro": ["openneuro", "openneuro-cli"],
+    }
+
+
+def nb_months_backlog(debug):
+    return 2 if debug else 11
 
 
 def get_topics_for_tag(tag: str, debug=False, verbose=False) -> pd.DataFrame:
@@ -203,18 +226,11 @@ def return_stats(df: pd.DataFrame, nb_topics: Optional[int] = None) -> dict:
     stats = {
         "nb_topics": nb_topics,
         "no_reply": len(df[df["posts_count"] == 1]),
-        "mean_nb_post_per_topic": df["posts_count"].mean(),
+        "nb_posts": df["posts_count"].sum(),
         "sum_nb_new_posts": df["nb_new_posts"].sum(),
         "accepted_answer": len(df[df["has_accepted_answer"] == True]),
-        "percent_no_reply": 0,
-        "percent_accepted_answer": 0,
     }
 
-    if stats["nb_topics"] > 0:
-        stats["percent_no_reply"] = stats["no_reply"] / stats["nb_topics"] * 100
-        stats["percent_accepted_answer"] = (
-            stats["accepted_answer"] / stats["nb_topics"] * 100
-        )
     return stats
 
 
@@ -231,20 +247,17 @@ def main():
         "tag": [],
         "nb_topics": [],
         "new_topics": [],
+        "nb_posts": [],
         "new_posts": [],
-        "mean_nb_post_per_topic": [],
-        "no_reply": [],
-        "percent_no_reply": [],
-        "accepted_answer": [],
-        "percent_accepted_answer": [],
+        "topics_with_no_reply": [],
+        "topics_with_accepted_answer": [],
     }
 
-    for tag in tags():
+    for tag in tags(debug):
 
         (df, nb_topics) = get_topics_for_tag(tag, debug=debug, verbose=verbose)
 
-        print(f"\n[underline]neurostars tag '{tag}':[underline]")
-        print(f"\t{nb_topics} topics")
+        print(f"[underline]neurostars tag '{tag}':[underline]")
 
         summary["tag"].append(tag)
         summary["nb_topics"].append(nb_topics)
@@ -257,23 +270,11 @@ def main():
 
             recent_topic = return_topics_for_month(df, month, year)
 
-            print(f"\t\t{stats['mean_nb_post_per_topic']:.2f} posts per topic")
-            print(
-                f"\t\t{stats['no_reply']} ({stats['percent_no_reply']:.2f}%) with no reply"
-            )
-            print(
-                f"\t\t{stats['accepted_answer']} ({stats['percent_accepted_answer']:.2f}%) with accepted answers"
-            )
-            print(f"\t{recent_topic.sum()} new topics")
-            print(f"\t{stats['sum_nb_new_posts']} new posts")
-
             summary["new_topics"].append(recent_topic.sum())
             summary["new_posts"].append(stats["sum_nb_new_posts"])
-            summary["mean_nb_post_per_topic"].append(stats["mean_nb_post_per_topic"])
-            summary["no_reply"].append(stats["no_reply"])
-            summary["percent_no_reply"].append(stats["percent_no_reply"])
-            summary["accepted_answer"].append(stats["accepted_answer"])
-            summary["percent_accepted_answer"].append(stats["percent_accepted_answer"])
+            summary["nb_posts"].append(stats["nb_posts"])
+            summary["topics_with_no_reply"].append(stats["no_reply"])
+            summary["topics_with_accepted_answer"].append(stats["accepted_answer"])
 
             tmp_month = month
             tmp_year = year
@@ -282,7 +283,7 @@ def main():
                 "key": [],
                 "value": [],
             }
-            for _ in range(1, 5):
+            for _ in range(1, nb_months_backlog(debug)):
 
                 topic_in_that_month = return_topics_for_month(df, tmp_month, tmp_year)
                 df_this_month = df[topic_in_that_month]
@@ -308,6 +309,15 @@ def main():
                 plot_neurostars("neurostars_monthly_stats.tsv", print_to_file=True)
 
     summary = pd.DataFrame(data=summary)
+    summary["mean_nb_post_per_topic"] = summary.apply(
+        lambda row: row.nb_posts / row.nb_topics, axis=1
+    )
+    summary["percent_no_reply"] = summary.apply(
+        lambda row: row.topics_with_no_reply / row.nb_topics * 100, axis=1
+    )
+    summary["percent_accepted_answer"] = summary.apply(
+        lambda row: row.topics_with_accepted_answer / row.nb_topics * 100, axis=1
+    )
     summary.to_csv("neurostars_summary_stats.tsv", sep="\t")
     print(summary)
 
