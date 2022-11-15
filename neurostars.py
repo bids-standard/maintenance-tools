@@ -4,9 +4,12 @@ Pings neurostars discourse API to:
 - get all of topics for a list of tags
 - saves the requests content to TSV for each tag
 - prints some info for each tag
-    - nb of posts
-    - nb of posts with no reply
-    - nb of posts with accepted answer
+    - nb of topics
+    - nb of topics with no reply
+    - nb of topics with accepted answer
+    - mean nb of posts per topic
+    - nb new topics
+    - nb new posts
 - for the BIDS tag it prints those data for:
   - the last month 
   - the last 12 months
@@ -19,6 +22,8 @@ Note:
 """
 
 from datetime import datetime
+
+from typing import Optional
 
 import pandas as pd
 import requests
@@ -122,7 +127,12 @@ def get_topics_for_tag(tag: str, debug=False, verbose=False) -> pd.DataFrame:
 
         for i, topic in enumerate(response.json()["topic_list"]["topics"]):
             if verbose:
-                print(f"{i}. {topic['created_at']} {topic['title']}")
+                print(
+                    f"{i}. {topic['created_at']} | {topic['posts_count']} | {topic['title']}"
+                )
+
+            nb_new_posts = return_nb_new_posts_for_topic(topic)
+            topic["nb_new_posts"] = nb_new_posts
 
             df = pd.json_normalize(topic)
             dfs.append(df)
@@ -135,27 +145,68 @@ def get_topics_for_tag(tag: str, debug=False, verbose=False) -> pd.DataFrame:
     return df, nb_topics
 
 
-def return_posts_for_month(df: pd.DataFrame, month: int, year: int):
+def get_posts_for_topic(topic_id: str) -> pd.DataFrame:
+
+    url = f"https://neurostars.org/t/{topic_id}/posts.json"
+
+    response = requests.get(url)
+
+    if response.status_code != 200:
+        print(f"[red]request failed: {url}[/red]")
+        return None
+
+    posts = response.json()["post_stream"]["posts"]
+    df = pd.json_normalize(posts)
+    return df
+
+def return_nb_new_posts_for_topic(topic: dict) -> int:
+
+    last_posted_at = topic["last_posted_at"]
+    last_posted_at.replace("Z", "+00:00")
+    last_posted_at = datetime.strptime(last_posted_at, "%Y-%m-%dT%H:%M:%S.%f%z")
+
+    year = datetime.now().year
+    beginning_month = datetime(year, month, 1).astimezone()    
+
+    if last_posted_at < beginning_month:
+        return 0
+
+    topic_id = topic["id"]
+    df_post = get_posts_for_topic(topic_id)
+
+    return return_nb_posts_since_month(df_post, month, year)
+        
+
+def return_nb_posts_since_month(df: pd.DataFrame, month: int, year: int) -> int:
+    (mindate, maxdate) = return_min_max_date(month, year)
+    created_at = pd.to_datetime(df["created_at"], infer_datetime_format=True).dt.date
+    is_newly_created = (created_at > mindate.date()) & (created_at < maxdate.date())
+    return is_newly_created.sum()
+
+
+def return_topics_for_month(df: pd.DataFrame, month: int, year: int):
     (mindate, maxdate) = return_min_max_date(month, year)
     created_at = pd.to_datetime(df["created_at"], infer_datetime_format=True).dt.date
     return (created_at > mindate.date()) & (created_at < maxdate.date())
 
 
-def return_stats(df, nb_topics=None):
+def return_stats(df: pd.DataFrame, nb_topics: Optional[int] =None) -> dict:
     if nb_topics is None:
         nb_topics = len(df)
     stats = {
-        "nb_posts": nb_topics,
+        "nb_topics": nb_topics,
         "no_reply": len(df[df["posts_count"] == 1]),
+        "mean_nb_post_per_topic": df["posts_count"].mean(),
+        "sum_nb_new_posts": df["nb_new_posts"].sum(),
         "accepted_answer": len(df[df["has_accepted_answer"] == True]),
         "percent_no_reply": 0,
         "percent_accepted_answer": 0,
     }
 
-    if stats["nb_posts"] > 0:
-        stats["percent_no_reply"] = stats["no_reply"] / stats["nb_posts"] * 100
+    if stats["nb_topics"] > 0:
+        stats["percent_no_reply"] = stats["no_reply"] / stats["nb_topics"] * 100
         stats["percent_accepted_answer"] = (
-            stats["accepted_answer"] / stats["nb_posts"] * 100
+            stats["accepted_answer"] / stats["nb_topics"] * 100
         )
     return stats
 
@@ -167,29 +218,32 @@ def main():
     print(f"Neurostats stats for the {datetime.now().strftime('%B')} {year}")
 
     (mindate, maxdate) = return_min_max_date(month, year)
-    print(f"New posts counted between {mindate.date()} and {maxdate.date()}")
+    print(f"New topics counted between {mindate.date()} and {maxdate.date()}")
 
     for tag in tags:
 
         (df, nb_topics) = get_topics_for_tag(tag, debug=debug, verbose=verbose)
 
         print(f"\n[underline]neurostars tag '{tag}':[underline]")
-        print(f"\t{nb_topics} posts")
+        print(f"\t{nb_topics} topics")
+
         if df is not None:
 
             df.to_csv(f"{tag}.tsv", index=False, sep="\t")
 
             stats = return_stats(df, nb_topics)
 
-            recent_post = return_posts_for_month(df, month, year)
+            recent_topic = return_topics_for_month(df, month, year)
 
+            print(f"\t\t{stats['mean_nb_post_per_topic']:.2f} posts per topic")
             print(
                 f"\t\t{stats['no_reply']} ({stats['percent_no_reply']:.2f}%) with no reply"
             )
             print(
                 f"\t\t{stats['accepted_answer']} ({stats['percent_accepted_answer']:.2f}%) with accepted answers"
             )
-            print(f"\t{recent_post.sum()} new posts")
+            print(f"\t{recent_topic.sum()} new topics")
+            print(f"\t{stats['sum_nb_new_posts']} new posts")
 
             tmp_month = month
             tmp_year = year
@@ -200,12 +254,12 @@ def main():
             }
             for _ in range(1, 11):
 
-                post_in_that_month = return_posts_for_month(df, tmp_month, tmp_year)
-                df_this_month = df[post_in_that_month]
+                topic_in_that_month = return_topics_for_month(df, tmp_month, tmp_year)
+                df_this_month = df[topic_in_that_month]
 
                 stats = return_stats(df_this_month)
 
-                for key in ["nb_posts", "no_reply", "accepted_answer"]:
+                for key in ["nb_topics", "no_reply", "accepted_answer"]:
                     monthly_stats["year_month"].append(
                         datetime(tmp_year, tmp_month, 1).strftime("%Y-%m")
                     )
