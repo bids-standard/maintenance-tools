@@ -11,8 +11,8 @@ Pings neurostars discourse API to:
     - nb new topics
     - nb new posts
 - for the BIDS tag it prints those data for:
-  - the last month 
-  - the last 12 months
+    - the last month 
+    - the last 12 months
 
 API doc: https://docs.discourse.org/
 
@@ -36,30 +36,6 @@ list of tags
 GET https://neurostars.org/tags.json 
 """
 
-tags = [
-    "bids",
-    "bids-specification",
-    "bids-validator",
-    "bids-app",
-    "bidskit",
-    "pybids",
-    "bidsonym",
-    "dcm2bids",
-    "heudiconv",
-    "mriqc",
-    "fmriprep-report",
-    "fmriprep",
-    "dmriprep",
-    "qsiprep",
-    "aslprep",
-    "smriprep",
-    "dtiprep",
-    "nipreps",
-    "niprep",
-    "fitlins",
-    "openneuro",
-    "openneuro-cli",
-]
 
 verbose = False
 
@@ -68,6 +44,36 @@ debug = False
 
 # Set a month of interest
 month = 10  # integer, e.g., May = 5
+
+
+def tags():
+    if debug:
+        return ["bids", "fmriprep"]
+    else:
+        return [
+            "bids",
+            "bids-specification",
+            "bids-validator",
+            "bids-app",
+            "bidskit",
+            "pybids",
+            "bidsonym",
+            "dcm2bids",
+            "heudiconv",
+            "mriqc",
+            "fmriprep-report",
+            "fmriprep",
+            "dmriprep",
+            "qsiprep",
+            "aslprep",
+            "smriprep",
+            "dtiprep",
+            "nipreps",
+            "niprep",
+            "fitlins",
+            "openneuro",
+            "openneuro-cli",
+        ]
 
 
 def get_topics_for_tag(tag: str, debug=False, verbose=False) -> pd.DataFrame:
@@ -159,6 +165,7 @@ def get_posts_for_topic(topic_id: str) -> pd.DataFrame:
     df = pd.json_normalize(posts)
     return df
 
+
 def return_nb_new_posts_for_topic(topic: dict) -> int:
 
     last_posted_at = topic["last_posted_at"]
@@ -166,7 +173,7 @@ def return_nb_new_posts_for_topic(topic: dict) -> int:
     last_posted_at = datetime.strptime(last_posted_at, "%Y-%m-%dT%H:%M:%S.%f%z")
 
     year = datetime.now().year
-    beginning_month = datetime(year, month, 1).astimezone()    
+    beginning_month = datetime(year, month, 1).astimezone()
 
     if last_posted_at < beginning_month:
         return 0
@@ -175,7 +182,7 @@ def return_nb_new_posts_for_topic(topic: dict) -> int:
     df_post = get_posts_for_topic(topic_id)
 
     return return_nb_posts_since_month(df_post, month, year)
-        
+
 
 def return_nb_posts_since_month(df: pd.DataFrame, month: int, year: int) -> int:
     (mindate, maxdate) = return_min_max_date(month, year)
@@ -190,7 +197,7 @@ def return_topics_for_month(df: pd.DataFrame, month: int, year: int):
     return (created_at > mindate.date()) & (created_at < maxdate.date())
 
 
-def return_stats(df: pd.DataFrame, nb_topics: Optional[int] =None) -> dict:
+def return_stats(df: pd.DataFrame, nb_topics: Optional[int] = None) -> dict:
     if nb_topics is None:
         nb_topics = len(df)
     stats = {
@@ -220,12 +227,27 @@ def main():
     (mindate, maxdate) = return_min_max_date(month, year)
     print(f"New topics counted between {mindate.date()} and {maxdate.date()}")
 
-    for tag in tags:
+    summary = {
+        "tag": [],
+        "nb_topics": [],
+        "new_topics": [],
+        "new_posts": [],
+        "mean_nb_post_per_topic": [],
+        "no_reply": [],
+        "percent_no_reply": [],
+        "accepted_answer": [],
+        "percent_accepted_answer": [],
+    }
+
+    for tag in tags():
 
         (df, nb_topics) = get_topics_for_tag(tag, debug=debug, verbose=verbose)
 
         print(f"\n[underline]neurostars tag '{tag}':[underline]")
         print(f"\t{nb_topics} topics")
+
+        summary["tag"].append(tag)
+        summary["nb_topics"].append(nb_topics)
 
         if df is not None:
 
@@ -245,6 +267,14 @@ def main():
             print(f"\t{recent_topic.sum()} new topics")
             print(f"\t{stats['sum_nb_new_posts']} new posts")
 
+            summary["new_topics"].append(recent_topic.sum())
+            summary["new_posts"].append(stats["sum_nb_new_posts"])
+            summary["mean_nb_post_per_topic"].append(stats["mean_nb_post_per_topic"])
+            summary["no_reply"].append(stats["no_reply"])
+            summary["percent_no_reply"].append(stats["percent_no_reply"])
+            summary["accepted_answer"].append(stats["accepted_answer"])
+            summary["percent_accepted_answer"].append(stats["percent_accepted_answer"])
+
             tmp_month = month
             tmp_year = year
             monthly_stats = {
@@ -252,7 +282,7 @@ def main():
                 "key": [],
                 "value": [],
             }
-            for _ in range(1, 11):
+            for _ in range(1, 5):
 
                 topic_in_that_month = return_topics_for_month(df, tmp_month, tmp_year)
                 df_this_month = df[topic_in_that_month]
@@ -276,6 +306,10 @@ def main():
             if tag == "bids":
                 monthly_stats.to_csv("neurostars_monthly_stats.tsv", sep="\t")
                 plot_neurostars("neurostars_monthly_stats.tsv", print_to_file=True)
+
+    summary = pd.DataFrame(data=summary)
+    summary.to_csv("neurostars_summary_stats.tsv", sep="\t")
+    print(summary)
 
 
 if __name__ == "__main__":
