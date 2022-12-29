@@ -24,6 +24,7 @@ OUTPUT:
 - neurostars_summary_stats.tsv
 - neurostars_short_summary_stats.tsv
 
+
 API doc: https://docs.discourse.org/
 """
 
@@ -99,7 +100,6 @@ def tags_combine():
         "openneuro": ["openneuro", "openneuro-cli"],
     }
 
-
 def print_note(month, year, nb_topics, nb_posts):
     (mindate, maxdate) = return_min_max_date(month, year)
     print(f"Neurostats stats for the {datetime.now().strftime('%B')} {year}")
@@ -161,7 +161,6 @@ def retrun_nb_posts_and_topics_in_last_30_days():
     nb_posts = response.json()["about"]["stats"]["posts_30_days"]
 
     return nb_topics, nb_posts
-
 
 def get_topics_for_tag(tag: str, debug=False, verbose=False) -> pd.DataFrame:
     """Return a dataframe of neurostars topics for a given tag
@@ -378,6 +377,7 @@ def main():
     summary["percent_accepted_answer"] = summary.apply(
         lambda row: row.topics_with_accepted_answer / row.nb_topics * 100, axis=1
     )
+
     summary.to_csv("neurostars_summary_stats.tsv", sep="\t", index=False)
 
     (nb_topics, nb_posts) = retrun_nb_posts_and_topics_in_last_30_days()
