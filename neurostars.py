@@ -16,11 +16,15 @@ Pings neurostars discourse API to:
     - the last month 
     - the last X months
 
-API doc: https://docs.discourse.org/
+- outputs a summary table with the above info for each tag
+- outputs a summary table with only the tags with new activity
 
-Note: 
-- some topics have several tags so they may be counted twice
-- some topics may not be tagged so numbers here may be an underestimation
+OUTPUT:
+
+- neurostars_summary_stats.tsv
+- neurostars_short_summary_stats.tsv
+
+API doc: https://docs.discourse.org/
 """
 
 from datetime import datetime
@@ -39,16 +43,16 @@ GET https://neurostars.org/tags.json
 """
 
 
-verbose = False
+verbose = True
 
 # Gets only the first 2 pages of topics if True
 debug = False
 
 # Set a month of interest
-month = 11  # integer, e.g., May = 5
+month = 12  # integer, e.g., May = 5
 
 
-def tags(debug):
+def tags(debug=False):
     if debug:
         return ["pybids", "bids-app"]
     else:
@@ -79,6 +83,7 @@ def tags(debug):
 
 
 def tags_combine():
+    """Not used yet"""
     return {
         "nipreps": [
             "fmriprep-report",
@@ -95,8 +100,67 @@ def tags_combine():
     }
 
 
+def print_note(month, year, nb_topics, nb_posts):
+    (mindate, maxdate) = return_min_max_date(month, year)
+    print(f"Neurostats stats for the {datetime.now().strftime('%B')} {year}")
+    print(f"{nb_topics} new topics overall over the last 30 days")
+    print(f"{nb_posts} new posts overall over the last 30 days")
+    print(
+        f"New topics for given tags counted between {mindate.date()} and {maxdate.date()}"
+    )  
+    print(f"Included queried tags:{tags()}")  
+    print(
+        """
+Note: 
+- some topics have several tags so they may be counted twice
+- some topics may not be tagged so numbers here may be an underestimation
+- tags with no new topics or posts are not included in the summary table below"""
+    )
+
+
+def shorten_table(summary_tsv):
+    """Create a smaller version of the output table.
+
+    - removes some extra columns
+    - rename some columns
+    - keep tags that have new topics or new posts
+    """
+
+    columns_to_drop = [
+        "mean_nb_post_per_topic",
+        "percent_no_reply",
+        "percent_accepted_answer",
+    ]
+
+    columns_to_rename = {
+        "topics_with_accepted_answer": "topics_with_answer",
+    }
+
+    short_summary = pd.read_csv(summary_tsv, sep="\t", index_col="tag")
+
+    short_summary = short_summary.drop(columns=columns_to_drop)
+    for col in columns_to_rename:
+        short_summary = short_summary.rename(columns={col: columns_to_rename[col]})
+    for col in short_summary.columns.to_list():
+        short_summary = short_summary.rename(columns={col: col.replace("_", " ")})
+
+    mask = (short_summary["new topics"] != 0) | (short_summary["new posts"] != 0)
+    short_summary = short_summary[mask]
+
+    short_summary.to_csv("neurostars_short_summary_stats.tsv", sep="\t", index=True)
+
+
 def nb_months_backlog(debug):
     return 2 if debug else 11
+
+
+def retrun_nb_posts_and_topics_in_last_30_days():
+    url = "https://neurostars.org/about.json"
+    response = requests.get(url)
+    nb_topics = response.json()["about"]["stats"]["topics_30_days"]
+    nb_posts = response.json()["about"]["stats"]["posts_30_days"]
+
+    return nb_topics, nb_posts
 
 
 def get_topics_for_tag(tag: str, debug=False, verbose=False) -> pd.DataFrame:
@@ -238,11 +302,6 @@ def main():
 
     year = datetime.now().year
 
-    print(f"Neurostats stats for the {datetime.now().strftime('%B')} {year}")
-
-    (mindate, maxdate) = return_min_max_date(month, year)
-    print(f"New topics counted between {mindate.date()} and {maxdate.date()}")
-
     summary = {
         "tag": [],
         "nb_topics": [],
@@ -257,7 +316,8 @@ def main():
 
         (df, nb_topics) = get_topics_for_tag(tag, debug=debug, verbose=verbose)
 
-        print(f"[underline]neurostars tag '{tag}':[underline]")
+        if verbose:
+            print(f"[underline]neurostars tag '{tag}'[underline]")
 
         summary["tag"].append(tag)
         summary["nb_topics"].append(nb_topics)
@@ -318,7 +378,13 @@ def main():
     summary["percent_accepted_answer"] = summary.apply(
         lambda row: row.topics_with_accepted_answer / row.nb_topics * 100, axis=1
     )
-    summary.to_csv("neurostars_summary_stats.tsv", sep="\t")
+    summary.to_csv("neurostars_summary_stats.tsv", sep="\t", index=False)
+
+    (nb_topics, nb_posts) = retrun_nb_posts_and_topics_in_last_30_days()
+
+    shorten_table("neurostars_summary_stats.tsv")
+
+    print_note(month, year, nb_topics, nb_posts)
     print(summary)
 
 
