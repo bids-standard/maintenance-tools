@@ -51,7 +51,7 @@ def plot_information(df: pd.DataFrame, month: int, print_to_file=True):
     fig.suptitle(f"BIDS: GitHub summary for {calendar.month_name[month]}")
 
     if print_to_file:
-        fig.savefig("output.png", bbox_inches="tight")
+        fig.savefig("output_gh_summary.png", bbox_inches="tight")
 
 
 def plot_neurostars(file, print_to_file=True):
@@ -73,4 +73,4 @@ def plot_neurostars(file, print_to_file=True):
         fig.show()
 
         if print_to_file:
-            fig.savefig("output.png", bbox_inches="tight")
+            fig.savefig("output_neurostars.png", bbox_inches="tight")
