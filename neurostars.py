@@ -13,7 +13,7 @@ Pings neurostars discourse API to:
     - mean nb of posts per topic
 
 - for the BIDS tag it prints those data for:
-    - the last month 
+    - the last month
     - the last X months
 
 - outputs a summary table with the above info for each tag
@@ -40,7 +40,7 @@ from utils import return_min_max_date, plot_neurostars
 
 """
 list of tags
-GET https://neurostars.org/tags.json 
+GET https://neurostars.org/tags.json
 """
 
 
@@ -50,7 +50,7 @@ verbose = True
 debug = False
 
 # Set a month of interest
-month = 12  # integer, e.g., May = 5
+month = 4  # integer, e.g., May = 5
 
 
 def tags(debug=False):
@@ -100,18 +100,20 @@ def tags_combine():
         "openneuro": ["openneuro", "openneuro-cli"],
     }
 
+
 def print_note(month, year, nb_topics, nb_posts):
     (mindate, maxdate) = return_min_max_date(month, year)
-    print(f"Neurostats stats for the {datetime.now().strftime('%B')} {year}")
+    monthname = datetime.datetime(year, month, 1).strftime('%B')
+    print(f"Neurostats stats for {monthname} {year}")
     print(f"{nb_topics} new topics overall over the last 30 days")
     print(f"{nb_posts} new posts overall over the last 30 days")
     print(
         f"New topics for given tags counted between {mindate.date()} and {maxdate.date()}"
-    )  
-    print(f"Included queried tags:{tags()}")  
+    )
+    print(f"Included queried tags:{tags()}")
     print(
         """
-Note: 
+Note:
 - some topics have several tags so they may be counted twice
 - some topics may not be tagged so numbers here may be an underestimation
 - tags with no new topics or posts are not included in the summary table below"""
