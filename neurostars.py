@@ -50,7 +50,7 @@ verbose = True
 debug = False
 
 # Set a month of interest
-month = 4  # integer, e.g., May = 5
+month = 5  # integer, e.g., May = 5
 
 
 def tags(debug=False):
@@ -103,7 +103,7 @@ def tags_combine():
 
 def print_note(month, year, nb_topics, nb_posts):
     (mindate, maxdate) = return_min_max_date(month, year)
-    monthname = datetime.datetime(year, month, 1).strftime('%B')
+    monthname = datetime(year, month, 1).strftime('%B')
     print(f"Neurostats stats for {monthname} {year}")
     print(f"{nb_topics} new topics overall over the last 30 days")
     print(f"{nb_posts} new posts overall over the last 30 days")
@@ -274,14 +274,14 @@ def return_nb_new_posts_for_topic(topic: dict) -> int:
 
 def return_nb_posts_since_month(df: pd.DataFrame, month: int, year: int) -> int:
     (mindate, maxdate) = return_min_max_date(month, year)
-    created_at = pd.to_datetime(df["created_at"], infer_datetime_format=True).dt.date
+    created_at = pd.to_datetime(df["created_at"]).dt.date
     is_newly_created = (created_at > mindate.date()) & (created_at < maxdate.date())
     return is_newly_created.sum()
 
 
 def return_topics_for_month(df: pd.DataFrame, month: int, year: int):
     (mindate, maxdate) = return_min_max_date(month, year)
-    created_at = pd.to_datetime(df["created_at"], infer_datetime_format=True).dt.date
+    created_at = pd.to_datetime(df["created_at"]).dt.date
     return (created_at > mindate.date()) & (created_at < maxdate.date())
 
 
