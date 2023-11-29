@@ -37,7 +37,7 @@ token = None
 g = Github(login_or_token=token)
 
 # Set a month of interest
-month = 9  # integer, e.g., May = 5
+month = 11  # integer, e.g., May = 5
 user = "bids-standard"
 
 # Set repositories of interest

@@ -1,6 +1,7 @@
 """Functions that get reused across modules."""
 import calendar
 from datetime import datetime
+from datetime import timezone
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -11,13 +12,13 @@ def return_min_max_date(month, year=None):
     """Calculate min and maxdate for our time window of interest."""
     if year is None:
         year = datetime.now().year
-    mindate = datetime(year, month, 1)
+    mindate = datetime(year, month, 1, tzinfo=timezone.utc)
     if month < 12:
         assert month >= 1, "month must be an int between 1 and 12"
-        maxdate = datetime(year, month + 1, 1)
+        maxdate = datetime(year, month + 1, 1, tzinfo=timezone.utc)
     else:
         assert month == 12, "month must be an int between 1 and 12"
-        maxdate = datetime(year + 1, 1, 1)
+        maxdate = datetime(year + 1, 1, 1, tzinfo=timezone.utc)
 
     return mindate, maxdate
 
@@ -55,7 +56,7 @@ def plot_information(df: pd.DataFrame, month: int, print_to_file=True):
 
 
 def plot_neurostars(file, print_to_file=True):
-
+    """Plot neurostars."""
     df = pd.read_csv(file, sep="\t")
 
     df["year_month"] = pd.to_datetime(df.year_month)

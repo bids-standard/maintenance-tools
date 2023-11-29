@@ -1,0 +1,5 @@
+[tool.ruff]
+select = ["E", "F", "W", "D"]
+
+[tool.ruff.pydocstyle]
+convention = "numpy"
