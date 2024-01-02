@@ -59,7 +59,7 @@ def main(repos):
 
     # Parse information
 
-    (mindate, maxdate) = return_min_max_date(month)
+    (mindate, maxdate) = return_min_max_date(month, year=2024)
 
     # PRs/issues are ordered newest to oldest by creation date
     # we go through them in order, counting closed and created
