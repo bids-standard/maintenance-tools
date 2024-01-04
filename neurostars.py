@@ -50,8 +50,9 @@ verbose = True
 # Gets only the first 2 pages of topics if True
 debug = False
 
-# Set a month of interest
-month = 11  # integer, e.g., May = 5
+# Set a month and year of interest
+month = 12  # integer, e.g., May = 5
+year = 2023
 
 
 def tags(debug=False):
@@ -265,7 +266,6 @@ def return_nb_new_posts_for_topic(topic: dict) -> int:
     last_posted_at.replace("Z", "+00:00")
     last_posted_at = datetime.strptime(last_posted_at, "%Y-%m-%dT%H:%M:%S.%f%z")
 
-    year = datetime.now().year
     beginning_month = datetime(year, month, 1).astimezone()
 
     if last_posted_at < beginning_month:
@@ -309,8 +309,6 @@ def return_stats(df: pd.DataFrame, nb_topics: Optional[int] = None) -> dict:
 
 def main():
     """Ping the neurostars API."""
-    year = datetime.now().year
-
     summary = {
         "tag": [],
         "nb_topics": [],
